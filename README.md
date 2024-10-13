@@ -19,4 +19,7 @@ Bill Maker is a simple billing application available in both Python and C. It al
 ### Python Version
 1. Install dependencies:
    ```bash
-   pip install xlsxwriter pynput
+   pip install xlsxwriter 
+2. Install dependencies:
+   ```bash
+   pip install pynput
