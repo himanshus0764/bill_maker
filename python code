@@ -1,1 +1,108 @@
+import os
+import sys
+import xlsxwriter
+import signal
+from pynput import keyboard
 
+# Global variable to hold the workbook reference
+workbook = None
+
+# Function to create a bill
+def create_bill():
+    global workbook
+
+    # Define the path to the desktop
+    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+    file_name = input("Enter your bill file name (without extension): ") + '.xlsx'
+    file_path = os.path.join(desktop_path, file_name)
+
+    # Create a new workbook and worksheet
+    workbook = xlsxwriter.Workbook(file_path)
+    worksheet = workbook.add_worksheet()
+
+    # Define formatting
+    bold_left = workbook.add_format({'bold': True, 'align': 'left', 'valign': 'vcenter'})
+    left_aligned = workbook.add_format({'align': 'left', 'valign': 'vcenter'})
+    center_aligned = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+
+    # Collect inputs for the header section
+    head = input("Enter head name: ")
+    address = input("Enter address: ")
+    phone_number = input("Enter phone number: ")
+    date = input("Enter date (e.g., 17/03/24): ")
+    bill_no = input("Enter bill number: ")
+    to_company = input("Enter company name to send bill: ")
+    additional_address = input("Enter company address: ")
+
+    # Write header information
+    worksheet.merge_range('B1:H1', head, center_aligned)
+    worksheet.merge_range('B2:H2', 'WORKS CONTRACTOR CIVIL', center_aligned)
+    worksheet.merge_range('B3:H3', f'{address} (M) {phone_number}', left_aligned)
+    worksheet.write('G5', f'Date: {date}', bold_left)
+    worksheet.write('G7', f'Bill No: {bill_no}', bold_left)
+    worksheet.write('B8', 'To:', bold_left)
+    worksheet.merge_range('B9:H9', to_company, center_aligned)
+    worksheet.merge_range('B10:H10', additional_address, center_aligned)
+
+    # Write description
+    worksheet.merge_range('B12:H13', 'Labour Bill for Flooring and Tile Work', center_aligned)
+
+    # Write table headers
+    headers = ['Sr.No.', 'Description', 'No.', 'L.ft.', 'w.ft.', 'Total Sq. Ft.', 'Rate', 'Amount']
+    for i, header in enumerate(headers):
+        worksheet.write(13, i + 1, header, bold_left)
+
+    # Keep track of running state and keypresses
+    running = True
+    z = 1
+    keys_pressed = set()
+
+    # Keyboard handling to stop the loop
+    def on_press(key):
+        nonlocal running
+        keys_pressed.add(key)
+        if {keyboard.Key.esc, keyboard.Key.alt, keyboard.Key.ctrl}.issubset(keys_pressed):
+            running = False
+
+    def on_release(key):
+        keys_pressed.discard(key)
+
+    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    listener.start()
+
+    # Collect data and populate the worksheet
+    while running:
+        try:
+            worksheet.write(f'B{14 + z}', z)
+            description = input(f"Enter description for line {z}: ")
+            worksheet.write(f'C{14 + z}', description)
+
+            number = float(input("Enter No.: "))
+            lft = float(input("Enter L.ft.: "))
+            wft = float(input("Enter w.ft.: "))
+
+            total_sqft = lft * wft * number
+            rate = float(input("Enter Rate: "))
+            amount = total_sqft * rate
+
+            worksheet.write_row(f'D{14 + z}', [number, lft, wft, total_sqft, rate, amount])
+            z += 1
+        except KeyboardInterrupt:
+            print("\nProcess interrupted. Saving the file...")
+            break
+
+    listener.stop()
+
+# Cleanup function to close the workbook safely
+def cleanup(signum, frame):
+    if workbook:
+        workbook.close()
+    print("Workbook has been saved.")
+    sys.exit(0)
+
+# Bind the cleanup function to SIGINT signal
+signal.signal(signal.SIGINT, cleanup)
+
+# Execute the bill creation process
+if __name__ == "__main__":
+    create_bill()
