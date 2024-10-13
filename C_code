@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
+FILE *file = NULL;
+
+// Cleanup function to close the file safely
+void cleanup(int signum) {
+    if (file != NULL) {
+        fclose(file);
+        printf("File has been saved.\n");
+    }
+    exit(0);
+}
+
+int main() {
+    // Setup signal handler for SIGINT
+    signal(SIGINT, cleanup);
+
+    char head[100], address[200], phone_number[15], date[15], bill_no[10], to_company[100], additional_address[200];
+    char description[200];
+    int z = 1;
+
+    // Get file name from user and create file on desktop
+    char file_name[100];
+    printf("Enter your bill file name (without extension): ");
+    scanf("%s", file_name);
+
+    char file_path[200];
+    sprintf(file_path, "/home/%s/Desktop/%s.csv", getenv("USER"), file_name);
+    file = fopen(file_path, "w");
+    
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return 1;
+    }
+
+    // Collect header information
+    printf("Enter head name: ");
+    scanf(" %[^\n]", head);
+    printf("Enter address: ");
+    scanf(" %[^\n]", address);
+    printf("Enter phone number: ");
+    scanf("%s", phone_number);
+    printf("Enter date (e.g., 17/03/24): ");
+    scanf("%s", date);
+    printf("Enter bill number: ");
+    scanf("%s", bill_no);
+    printf("Enter company name to send bill: ");
+    scanf(" %[^\n]", to_company);
+    printf("Enter company address: ");
+    scanf(" %[^\n]", additional_address);
+
+    // Write header information to the file
+    fprintf(file, "%s,WORKS CONTRACTOR CIVIL\n", head);
+    fprintf(file, "%s (M) %s\n", address, phone_number);
+    fprintf(file, "Date: %s,Bill No: %s\n", date, bill_no);
+    fprintf(file, "To:,%s,%s\n\n", to_company, additional_address);
+    fprintf(file, "Labour Bill for Flooring and Tile Work\n\n");
+
+    // Write table headers
+    fprintf(file, "Sr.No.,Description,No.,L.ft.,w.ft.,Total Sq. Ft.,Rate,Amount\n");
+
+    // Collect and write table data
+    while (1) {
+        int number;
+        float lft, wft, rate, total_sqft, amount;
+
+        printf("Enter description for line %d: ", z);
+        scanf(" %[^\n]", description);
+
+        printf("Enter No.: ");
+        scanf("%d", &number);
+        printf("Enter L.ft.: ");
+        scanf("%f", &lft);
+        printf("Enter w.ft.: ");
+        scanf("%f", &wft);
+
+        total_sqft = number * lft * wft;
+        printf("Enter Rate: ");
+        scanf("%f", &rate);
+
+        amount = total_sqft * rate;
+
+        // Write data to the file
+        fprintf(file, "%d,%s,%d,%.2f,%.2f,%.2f,%.2f,%.2f\n", z, description, number, lft, wft, total_sqft, rate, amount);
+        z++;
+    }
+
+    return 0;
+}
